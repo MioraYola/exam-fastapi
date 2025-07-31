@@ -1,34 +1,44 @@
 from fastapi import FastAPI, requests
 from pydantic import BaseModel
 from starlette.requests import Request
-from starlette.responses import JSONResponse
-from typing import Optional
-
+from starlette.responses import JSONResponse, Response
+from typing import Optional, List
+from starlette import status
 app = FastAPI()
 
-
-@app.get("/hello")
-def read_hello(name: Optional[str]= None, is_teacher: Optional[bool]= None):
+class Book (BaseModel):
+    author: str
+    title: str 
+    content: str 
     
-    
-    if is_teacher is None and name is None :
-        return {"message": f"Hello world"}
-    
-    if is_teacher is None and name is not None :
-        is_teacher=False
-        
-    if is_teacher is not None and name is None :
-        name="Not found"
 
-    if is_teacher :
-        return {"message" :f"Hello teacher {name}"}
-    else :
-        return {"message" :f"Hello {name}"}
-        
+book_db = []
 
-class WelcomeRequest(BaseModel):
-    name: str
+@app.get("/ping", status_code=status.HTTP_200_OK)
+def root():
+    return {"message" :"pong"}
 
-@app.post("/welcome")
-def welcome_user(request: WelcomeRequest):
-    return {f"Bienvenue {request.name}"}
+@app.get("/home")
+def catch_all():
+    with open("welcome.html", "r", encoding="utf-8") as file:
+        html_content = file.read()
+    return Response(content=html_content, status_code=200, media_type="text/html")
+
+
+@app.post("/posts", status_code=status.HTTP_201_CREATED)
+def add_book(new_book: List[Book]):
+    book_db.extend(new_book)
+    return book_db
+
+@app.get("/posts", status_code=status.HTTP_200_OK)
+def root():
+    return book_db
+
+@app.put("/posts")
+def update_or_create_book(title: str):
+    for i, book in enumerate(book_db):
+        if book.title==title:
+            book_db[i] = book 
+        book_db.append(title)
+    return book_db
+
